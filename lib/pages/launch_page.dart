@@ -25,9 +25,11 @@ class _LaunchPageState extends State<LaunchPage> {
 
   Future<void> _checkJava() async {
     final installed = await _gameService.checkJavaInstallation();
-    setState(() {
-      isJavaInstalled = installed;
-    });
+    if (mounted) {
+      setState(() {
+        isJavaInstalled = installed;
+      });
+    }
   }
 
   Future<void> _loadVersions() async {
@@ -37,13 +39,15 @@ class _LaunchPageState extends State<LaunchPage> {
     
     final availableVersions = await _gameService.getAvailableVersions();
     
-    setState(() {
-      versions = availableVersions;
-      if (versions.isNotEmpty) {
-        selectedVersion = versions[0];
-      }
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        versions = availableVersions;
+        if (versions.isNotEmpty) {
+          selectedVersion = versions[0];
+        }
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _launchGame() async {

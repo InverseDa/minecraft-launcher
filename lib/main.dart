@@ -1,7 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
+import 'dart:io';
 import 'pages/home_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 仅在桌面平台(Windows、macOS、Linux)上初始化window_manager
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+    
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(1000, 650),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.hidden, // 隐藏标题栏
+      windowButtonVisibility: false, // 隐藏窗口按钮
+    );
+    
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+  
   runApp(const MinecraftLauncher());
 }
 
@@ -58,7 +81,107 @@ class MinecraftLauncher extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: const HomePage(),
+      home: const BorderlessWindow(
+        child: HomePage(),
+      ),
+    );
+  }
+}
+
+// 自定义无边框窗口组件
+class BorderlessWindow extends StatelessWidget {
+  final Widget child;
+  
+  const BorderlessWindow({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // 在非桌面平台上直接返回子组件
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      return child;
+    }
+    
+    return Scaffold(
+      body: Stack(
+        children: [
+          // 主体内容
+          child,
+          
+          // 右上角窗口控制按钮
+          Positioned(
+            top: 0,
+            right: 0,
+            child: WindowButtons(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// 窗口控制按钮
+class WindowButtons extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _buildButton(
+          icon: Icons.remove,
+          onPressed: () => windowManager.minimize(),
+          hoverColor: Colors.black12,
+        ),
+        _buildButton(
+          icon: Icons.crop_square,
+          onPressed: () async {
+            if (await windowManager.isMaximized()) {
+              windowManager.unmaximize();
+            } else {
+              windowManager.maximize();
+            }
+          },
+          hoverColor: Colors.black12,
+        ),
+        _buildButton(
+          icon: Icons.close,
+          onPressed: () => windowManager.close(),
+          hoverColor: Colors.red.withOpacity(0.8),
+          iconColor: Colors.red,
+          hoverIconColor: Colors.white,
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required Color hoverColor,
+    Color? iconColor,
+    Color? hoverIconColor,
+  }) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          hoverColor: hoverColor,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          child: SizedBox(
+            width: 46,
+            height: 32,
+            child: Icon(
+              icon, 
+              size: 16,
+              color: iconColor,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
